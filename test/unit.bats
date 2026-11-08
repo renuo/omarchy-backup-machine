@@ -34,6 +34,12 @@ stop_post() {
   [ ! -f "$STATE_DIRECTORY/repository" ]
 }
 
+@test "a run skipped away from the office leaves the last outcome alone" {
+  echo "success 1" >"$STATE_DIRECTORY/last-run"
+  stop_post exec-condition
+  [ "$(cat "$STATE_DIRECTORY/last-run")" = "success 1" ]
+}
+
 
 # Runs ExecCondition's check the way systemd would, against a given host.
 condition() {
