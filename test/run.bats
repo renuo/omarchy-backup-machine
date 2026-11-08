@@ -1,12 +1,12 @@
 setup() {
   SCRIPT="$BATS_TEST_DIRNAME/../libexec/run"
   PATH="$BATS_TEST_DIRNAME/fakebin:$PATH"
-  export NAS_BACKUP_SNAPSHOT_DIR="$BATS_TEST_TMPDIR/snapshots"
+  export BACKUP_MACHINE_SNAPSHOT_DIR="$BATS_TEST_TMPDIR/snapshots"
   export STATE_DIRECTORY="$BATS_TEST_TMPDIR/state"
   export FAKE_ARGS="$BATS_TEST_TMPDIR/args"
-  export NAS_BACKUP_SUBVOLUMES="/ /home"
+  export BACKUP_MACHINE_SUBVOLUMES="/ /home"
   export RESTIC_FORGET_ARGS="--keep-hourly 24 --keep-daily 30"
-  export NAS_BACKUP_ARGS="--exclude-caches --one-file-system"
+  export BACKUP_MACHINE_ARGS="--exclude-caches --one-file-system"
   mkdir -p "$STATE_DIRECTORY"
   : >"$FAKE_ARGS"
 }
@@ -14,20 +14,20 @@ setup() {
 @test "snapshots every subvolume read-only and backs up the snapshots" {
   run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  grep -qx "btrfs subvolume snapshot -r / $NAS_BACKUP_SNAPSHOT_DIR/root" "$FAKE_ARGS"
-  grep -qx "btrfs subvolume snapshot -r /home $NAS_BACKUP_SNAPSHOT_DIR/home" "$FAKE_ARGS"
-  grep -q "^restic backup $NAS_BACKUP_SNAPSHOT_DIR/root $NAS_BACKUP_SNAPSHOT_DIR/home --exclude-file=/etc/nas-backup/excludes.txt --exclude-caches --one-file-system |" "$FAKE_ARGS"
+  grep -qx "btrfs subvolume snapshot -r / $BACKUP_MACHINE_SNAPSHOT_DIR/root" "$FAKE_ARGS"
+  grep -qx "btrfs subvolume snapshot -r /home $BACKUP_MACHINE_SNAPSHOT_DIR/home" "$FAKE_ARGS"
+  grep -q "^restic backup $BACKUP_MACHINE_SNAPSHOT_DIR/root $BACKUP_MACHINE_SNAPSHOT_DIR/home --exclude-file=/etc/backup-machine/excludes.txt --exclude-caches --one-file-system |" "$FAKE_ARGS"
 }
 
 @test "names deeper subvolumes after their path" {
-  NAS_BACKUP_SUBVOLUMES="/var/lib/machines" run bash "$SCRIPT"
-  grep -qx "btrfs subvolume snapshot -r /var/lib/machines $NAS_BACKUP_SNAPSHOT_DIR/var-lib-machines" "$FAKE_ARGS"
+  BACKUP_MACHINE_SUBVOLUMES="/var/lib/machines" run bash "$SCRIPT"
+  grep -qx "btrfs subvolume snapshot -r /var/lib/machines $BACKUP_MACHINE_SNAPSHOT_DIR/var-lib-machines" "$FAKE_ARGS"
 }
 
 @test "deletes the snapshots afterwards" {
   run bash "$SCRIPT"
-  grep -qx "btrfs subvolume delete --commit-after $NAS_BACKUP_SNAPSHOT_DIR/root" "$FAKE_ARGS"
-  [ -z "$(ls "$NAS_BACKUP_SNAPSHOT_DIR")" ]
+  grep -qx "btrfs subvolume delete --commit-after $BACKUP_MACHINE_SNAPSHOT_DIR/root" "$FAKE_ARGS"
+  [ -z "$(ls "$BACKUP_MACHINE_SNAPSHOT_DIR")" ]
 }
 
 @test "deletes the snapshots when the backup fails too" {
@@ -38,11 +38,11 @@ EOF
   chmod +x "$BATS_TEST_TMPDIR/restic"
   PATH="$BATS_TEST_TMPDIR:$PATH" run bash "$SCRIPT"
   [ "$status" -ne 0 ]
-  [ -z "$(ls "$NAS_BACKUP_SNAPSHOT_DIR")" ]
+  [ -z "$(ls "$BACKUP_MACHINE_SNAPSHOT_DIR")" ]
 }
 
 @test "clears snapshots a crashed run left behind before taking new ones" {
-  mkdir -p "$NAS_BACKUP_SNAPSHOT_DIR/root"
+  mkdir -p "$BACKUP_MACHINE_SNAPSHOT_DIR/root"
   run bash "$SCRIPT"
   [ "$status" -eq 0 ]
   [ "$(grep -n 'delete --commit-after .*/root' "$FAKE_ARGS" | head -1 | cut -d: -f1)" -lt "$(grep -n 'snapshot -r / ' "$FAKE_ARGS" | cut -d: -f1)" ]

@@ -1,20 +1,20 @@
 setup() {
   SCRIPT="$BATS_TEST_DIRNAME/../ctl.sh"
   PATH="$BATS_TEST_DIRNAME/fakebin:$PATH"
-  export NAS_BACKUP_ETC="$BATS_TEST_TMPDIR/etc"
-  export NAS_BACKUP_STATE="$BATS_TEST_TMPDIR/state"
-  export NAS_BACKUP_RUN="$BATS_TEST_TMPDIR/run"
+  export BACKUP_MACHINE_ETC="$BATS_TEST_TMPDIR/etc"
+  export BACKUP_MACHINE_STATE="$BATS_TEST_TMPDIR/state"
+  export BACKUP_MACHINE_RUN="$BATS_TEST_TMPDIR/run"
   export FAKE_ARGS="$BATS_TEST_TMPDIR/args"
   export FAKE_SYSTEMD="$BATS_TEST_TMPDIR/systemd"
   export FAKE_GUM_ANSWERS="$BATS_TEST_TMPDIR/answers"
   export FAKE_CLIPBOARD="$BATS_TEST_TMPDIR/clipboard"
-  CONFIG="$NAS_BACKUP_ETC/backup.env"
+  CONFIG="$BACKUP_MACHINE_ETC/backup.env"
   mkdir -p "$FAKE_SYSTEMD"
   : >"$FAKE_ARGS"
 }
 
 settings() {
-  mkdir -p "$NAS_BACKUP_ETC"
+  mkdir -p "$BACKUP_MACHINE_ETC"
   printf '%s\n' "$@" >"$CONFIG"
 }
 
@@ -35,55 +35,55 @@ state_field() {
 }
 
 @test "state reads the settings the way systemd does" {
-  settings 'RCLONE_SMB_HOST=nas.example' '# RESTIC_REPOSITORY=old' 'RESTIC_REPOSITORY="rclone::smb:laptop_backups/me-delly"' 'NAS_BACKUP_SUBVOLUMES=/ /home' 'RESTIC_FORGET_ARGS=--keep-hourly 24' 'NAS_BACKUP_QUOTA_GB=2000'
+  settings 'RCLONE_SMB_HOST=nas.example' '# RESTIC_REPOSITORY=old' 'RESTIC_REPOSITORY="rclone::smb:laptop_backups/me-delly"' 'BACKUP_MACHINE_SUBVOLUMES=/ /home' 'RESTIC_FORGET_ARGS=--keep-hourly 24' 'BACKUP_MACHINE_QUOTA_GB=2000'
   run bash "$SCRIPT" state
   [ "$(jq -c '[.config, .host, .repository, .subvolumes, .forget, .quotaGb]' <<<"$output")" = '[true,"nas.example","rclone::smb:laptop_backups/me-delly","/ /home","--keep-hourly 24",2000]' ]
 }
 
 @test "state sees root's secret files without reading them" {
   settings 'RCLONE_SMB_HOST=nas.example'
-  touch "$NAS_BACKUP_ETC/nas.env" "$NAS_BACKUP_ETC/password"
-  chmod 000 "$NAS_BACKUP_ETC/nas.env" "$NAS_BACKUP_ETC/password"
+  touch "$BACKUP_MACHINE_ETC/nas.env" "$BACKUP_MACHINE_ETC/password"
+  chmod 000 "$BACKUP_MACHINE_ETC/nas.env" "$BACKUP_MACHINE_ETC/password"
   run bash "$SCRIPT" state
   [ "$(jq -c '[.login, .password]' <<<"$output")" = '[true,true]' ]
 }
 
 @test "state reads a quota that is not a number as none" {
-  settings 'NAS_BACKUP_QUOTA_GB=2TB'
+  settings 'BACKUP_MACHINE_QUOTA_GB=2TB'
   [ "$(state_field quotaGb)" = 0 ]
 }
 
 @test "state knows the run script is installed" {
-  touch "$NAS_BACKUP_RUN"
-  chmod +x "$NAS_BACKUP_RUN"
+  touch "$BACKUP_MACHINE_RUN"
+  chmod +x "$BACKUP_MACHINE_RUN"
   [ "$(state_field installed)" = true ]
 }
 
 @test "state counts the repository initialized only while it is the one set up" {
   settings 'RESTIC_REPOSITORY=rclone::smb:share/a'
-  mkdir -p "$NAS_BACKUP_STATE"
-  printf %s 'rclone::smb:share/a' >"$NAS_BACKUP_STATE/repository"
+  mkdir -p "$BACKUP_MACHINE_STATE"
+  printf %s 'rclone::smb:share/a' >"$BACKUP_MACHINE_STATE/repository"
   [ "$(state_field initialized)" = true ]
   settings 'RESTIC_REPOSITORY=rclone::smb:share/b'
   [ "$(state_field initialized)" = false ]
 }
 
 @test "state reports runs, the size on the NAS and systemd's view" {
-  mkdir -p "$NAS_BACKUP_STATE"
-  echo "exit-code 1762600000" >"$NAS_BACKUP_STATE/last-run"
-  echo "success 1762500000" >"$NAS_BACKUP_STATE/last-success"
-  echo '{"total_size":123456789,"total_file_count":5}' >"$NAS_BACKUP_STATE/stats.json"
-  echo enabled >"$FAKE_SYSTEMD/nas-backup.timer.enabled"
-  echo activating >"$FAKE_SYSTEMD/nas-backup.service.active"
+  mkdir -p "$BACKUP_MACHINE_STATE"
+  echo "exit-code 1762600000" >"$BACKUP_MACHINE_STATE/last-run"
+  echo "success 1762500000" >"$BACKUP_MACHINE_STATE/last-success"
+  echo '{"total_size":123456789,"total_file_count":5}' >"$BACKUP_MACHINE_STATE/stats.json"
+  echo enabled >"$FAKE_SYSTEMD/backup-machine.timer.enabled"
+  echo activating >"$FAKE_SYSTEMD/backup-machine.service.active"
   echo '[{"next":1762650000123456}]' >"$FAKE_SYSTEMD/timers.json"
   run bash "$SCRIPT" state
   [ "$(jq -c '[.result, .lastRun, .lastSuccess, .size, .timerEnabled, .running, .nextRun]' <<<"$output")" = '["exit-code",1762600000,1762500000,123456789,true,true,1762650000]' ]
 }
 
 @test "state reads garbled run and stats files as nothing" {
-  mkdir -p "$NAS_BACKUP_STATE"
-  echo "success soon" >"$NAS_BACKUP_STATE/last-run"
-  echo "oops" >"$NAS_BACKUP_STATE/stats.json"
+  mkdir -p "$BACKUP_MACHINE_STATE"
+  echo "success soon" >"$BACKUP_MACHINE_STATE/last-run"
+  echo "oops" >"$BACKUP_MACHINE_STATE/stats.json"
   run bash "$SCRIPT" state
   [ "$(jq -c '[.lastRun, .size]' <<<"$output")" = '[0,0]' ]
 }
@@ -98,12 +98,12 @@ state_field() {
   run bash "$SCRIPT" connect
   [ "$status" -eq 0 ]
   grep -qx 'rclone lsf --max-depth 1 :smb:laptop_backups | nas.example backup-user obscured:s3cret' "$FAKE_ARGS"
-  [ "$(cat "$NAS_BACKUP_ETC/nas.env")" = $'RCLONE_SMB_USER=backup-user\nRCLONE_SMB_PASS=obscured:s3cret' ]
-  [ "$(stat -c %a "$NAS_BACKUP_ETC/nas.env")" = 600 ]
+  [ "$(cat "$BACKUP_MACHINE_ETC/nas.env")" = $'RCLONE_SMB_USER=backup-user\nRCLONE_SMB_PASS=obscured:s3cret' ]
+  [ "$(stat -c %a "$BACKUP_MACHINE_ETC/nas.env")" = 600 ]
   grep -qx 'RCLONE_SMB_HOST=nas.example' "$CONFIG"
   grep -qx 'RESTIC_REPOSITORY=rclone::smb:laptop_backups/me-delly' "$CONFIG"
   [ "$(stat -c %a "$CONFIG")" = 644 ]
-  cmp "$NAS_BACKUP_ETC/excludes.txt" "$BATS_TEST_DIRNAME/../templates/excludes.txt"
+  cmp "$BACKUP_MACHINE_ETC/excludes.txt" "$BATS_TEST_DIRNAME/../templates/excludes.txt"
 }
 
 @test "connect asks for the password hidden" {
@@ -131,7 +131,7 @@ state_field() {
   FAKE_RCLONE_REFUSE=1 run bash "$SCRIPT" connect
   [ "$status" -eq 1 ]
   [[ $output == *"did not let us in"* ]]
-  [ ! -e "$NAS_BACKUP_ETC/nas.env" ]
+  [ ! -e "$BACKUP_MACHINE_ETC/nas.env" ]
 }
 
 @test "connect refuses an address without a share" {
@@ -145,53 +145,53 @@ state_field() {
   answers smb://nas.example/laptop_backups backup-user s3cret "../other"
   run bash "$SCRIPT" connect
   [ "$status" -eq 1 ]
-  [ ! -e "$NAS_BACKUP_ETC/nas.env" ]
+  [ ! -e "$BACKUP_MACHINE_ETC/nas.env" ]
 }
 
 @test "password creates a long random one only root can read" {
   answers "Create a new one"
   run bash "$SCRIPT" password
   [ "$status" -eq 0 ]
-  [ "$(stat -c %a "$NAS_BACKUP_ETC/password")" = 600 ]
-  [ "$(wc -c <"$NAS_BACKUP_ETC/password")" -ge 40 ]
+  [ "$(stat -c %a "$BACKUP_MACHINE_ETC/password")" = 600 ]
+  [ "$(wc -c <"$BACKUP_MACHINE_ETC/password")" -ge 40 ]
   [[ $output == *"1Password"* ]]
 }
 
 @test "password takes the one kept in 1Password on a new laptop" {
   answers "Enter the one I keep in 1Password" "kept-secret"
   run bash "$SCRIPT" password
-  [ "$(cat "$NAS_BACKUP_ETC/password")" = kept-secret ]
+  [ "$(cat "$BACKUP_MACHINE_ETC/password")" = kept-secret ]
 }
 
 @test "password never replaces an existing one" {
-  mkdir -p "$NAS_BACKUP_ETC"
-  echo old >"$NAS_BACKUP_ETC/password"
+  mkdir -p "$BACKUP_MACHINE_ETC"
+  echo old >"$BACKUP_MACHINE_ETC/password"
   run bash "$SCRIPT" password
-  [ "$(cat "$NAS_BACKUP_ETC/password")" = old ]
+  [ "$(cat "$BACKUP_MACHINE_ETC/password")" = old ]
   [[ $output == *"lock you out"* ]]
 }
 
 @test "copy-password reads it as root and hands it to the clipboard as sensitive" {
-  mkdir -p "$NAS_BACKUP_ETC"
-  echo s3cret >"$NAS_BACKUP_ETC/password"
+  mkdir -p "$BACKUP_MACHINE_ETC"
+  echo s3cret >"$BACKUP_MACHINE_ETC/password"
   run bash "$SCRIPT" copy-password
-  grep -qx "sudo cat $NAS_BACKUP_ETC/password" "$FAKE_ARGS"
+  grep -qx "sudo cat $BACKUP_MACHINE_ETC/password" "$FAKE_ARGS"
   grep -qx 'wl-copy --sensitive' "$FAKE_ARGS"
   [ "$(cat "$FAKE_CLIPBOARD")" = s3cret ]
 }
 
 @test "init creates a missing repository with the service's settings and remembers it" {
   settings 'RESTIC_REPOSITORY=rclone::smb:share/me' 'RESTIC_FORGET_ARGS=--keep-hourly 24 --keep-daily 30'
-  touch "$NAS_BACKUP_ETC/nas.env"
+  touch "$BACKUP_MACHINE_ETC/nas.env"
   run bash "$SCRIPT" init
   [ "$status" -eq 0 ]
-  grep -qx "restic init | rclone::smb:share/me | $NAS_BACKUP_ETC/password | --keep-hourly 24 --keep-daily 30" "$FAKE_ARGS"
-  [ "$(cat "$NAS_BACKUP_STATE/repository")" = 'rclone::smb:share/me' ]
+  grep -qx "restic init | rclone::smb:share/me | $BACKUP_MACHINE_ETC/password | --keep-hourly 24 --keep-daily 30" "$FAKE_ARGS"
+  [ "$(cat "$BACKUP_MACHINE_STATE/repository")" = 'rclone::smb:share/me' ]
 }
 
 @test "init connects to a repository that exists already" {
   settings 'RESTIC_REPOSITORY=rclone::smb:share/me'
-  touch "$NAS_BACKUP_ETC/nas.env"
+  touch "$BACKUP_MACHINE_ETC/nas.env"
   FAKE_RESTIC_EXISTS=1 run bash "$SCRIPT" init
   [[ $output == *"exists already"* ]]
   ! grep -q '^restic init' "$FAKE_ARGS"
@@ -206,8 +206,8 @@ state_field() {
 @test "edit opens root's files with sudoedit" {
   run bash "$SCRIPT" edit config
   run bash "$SCRIPT" edit excludes
-  [ "$(cat "$FAKE_ARGS")" = "sudoedit $NAS_BACKUP_ETC/backup.env
-sudoedit $NAS_BACKUP_ETC/excludes.txt" ]
+  [ "$(cat "$FAKE_ARGS")" = "sudoedit $BACKUP_MACHINE_ETC/backup.env
+sudoedit $BACKUP_MACHINE_ETC/excludes.txt" ]
 }
 
 @test "timer, backup and stop go to the system units quietly" {
@@ -216,10 +216,10 @@ sudoedit $NAS_BACKUP_ETC/excludes.txt" ]
   bash "$SCRIPT" backup
   run bash "$SCRIPT" stop
   [ "$output" = "" ]
-  [ "$(cat "$FAKE_ARGS")" = "systemctl enable --now nas-backup.timer
-systemctl disable --now nas-backup.timer
-systemctl start --no-block nas-backup.service
-systemctl stop nas-backup.service" ]
+  [ "$(cat "$FAKE_ARGS")" = "systemctl enable --now backup-machine.timer
+systemctl disable --now backup-machine.timer
+systemctl start --no-block backup-machine.service
+systemctl stop backup-machine.service" ]
 }
 
 @test "a refused unit change prints systemd's complaint" {
@@ -229,15 +229,15 @@ systemctl stop nas-backup.service" ]
 
 @test "schedule edits the timer with nvim as root" {
   bash "$SCRIPT" schedule
-  grep -qx 'sudo SYSTEMD_EDITOR=nvim systemctl edit nas-backup.timer' "$FAKE_ARGS"
+  grep -qx 'sudo SYSTEMD_EDITOR=nvim systemctl edit backup-machine.timer' "$FAKE_ARGS"
 }
 
 @test "snapshots runs restic as the service would" {
   settings 'RESTIC_REPOSITORY=rclone::smb:share/me'
-  touch "$NAS_BACKUP_ETC/nas.env"
+  touch "$BACKUP_MACHINE_ETC/nas.env"
   run bash "$SCRIPT" snapshots
-  grep -q "^sudo systemd-run --pty --quiet --collect --wait -p EnvironmentFile=$NAS_BACKUP_ETC/backup.env -p EnvironmentFile=$NAS_BACKUP_ETC/nas.env" "$FAKE_ARGS"
-  grep -qx "restic snapshots | rclone::smb:share/me | $NAS_BACKUP_ETC/password | " "$FAKE_ARGS"
+  grep -q "^sudo systemd-run --pty --quiet --collect --wait -p EnvironmentFile=$BACKUP_MACHINE_ETC/backup.env -p EnvironmentFile=$BACKUP_MACHINE_ETC/nas.env" "$FAKE_ARGS"
+  grep -qx "restic snapshots | rclone::smb:share/me | $BACKUP_MACHINE_ETC/password | " "$FAKE_ARGS"
 }
 
 @test "an unknown command prints usage" {

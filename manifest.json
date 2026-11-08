@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "renuo.nas-backup",
+  "id": "renuo.backup-machine",
   "name": "NAS backup",
   "version": "1.0.0",
   "author": "Renuo AG",

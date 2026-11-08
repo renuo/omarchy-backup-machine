@@ -8,12 +8,12 @@
 set -euo pipefail
 
 TEMPLATE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/templates"
-ETC=${NAS_BACKUP_ETC:-/etc/nas-backup}
-STATE_DIR=${NAS_BACKUP_STATE:-/var/lib/nas-backup}
+ETC=${BACKUP_MACHINE_ETC:-/etc/backup-machine}
+STATE_DIR=${BACKUP_MACHINE_STATE:-/var/lib/backup-machine}
 CONFIG="$ETC/backup.env"
-SERVICE=nas-backup.service
-TIMER=nas-backup.timer
-RUN=${NAS_BACKUP_RUN:-/usr/local/lib/nas-backup/run}
+SERVICE=backup-machine.service
+TIMER=backup-machine.timer
+RUN=${BACKUP_MACHINE_RUN:-/usr/local/lib/backup-machine/run}
 
 usage() {
   echo "usage: ctl.sh state | connect | password | copy-password | init | edit config|excludes | timer on|off | backup | stop | schedule | log | snapshots | browse | shell" >&2
@@ -68,9 +68,9 @@ state() {
     --argjson password "$(bool test -e "$ETC/password")" \
     --arg host "$host" \
     --arg repository "$repository" \
-    --arg subvolumes "$(setting NAS_BACKUP_SUBVOLUMES)" \
+    --arg subvolumes "$(setting BACKUP_MACHINE_SUBVOLUMES)" \
     --arg forget "$(setting RESTIC_FORGET_ARGS)" \
-    --argjson quotaGb "$(q=$(setting NAS_BACKUP_QUOTA_GB); [[ $q =~ ^[0-9]+$ ]] && echo "$q" || echo 0)" \
+    --argjson quotaGb "$(q=$(setting BACKUP_MACHINE_QUOTA_GB); [[ $q =~ ^[0-9]+$ ]] && echo "$q" || echo 0)" \
     --argjson reachable "$(bool reachable "$host")" \
     --argjson initialized "$(bool test -n "$repository" -a -f "$STATE_DIR/repository" -a "$(cat "$STATE_DIR/repository" 2>/dev/null)" = "$repository")" \
     --argjson timerEnabled "$(bool test "$enabled" = enabled)" \
@@ -88,13 +88,13 @@ put() {
   sudo install -D -m "$1" /dev/stdin "$2"
 }
 
-# restic as nas-backup.service runs it: same environment files, same cache.
+# restic as backup-machine.service runs it: same environment files, same cache.
 as_service() {
   sudo systemd-run --pty --quiet --collect --wait \
     -p EnvironmentFile="$ETC/backup.env" \
     -p EnvironmentFile="$ETC/nas.env" \
     -E RESTIC_PASSWORD_FILE="$ETC/password" \
-    -E RESTIC_CACHE_DIR=/var/cache/nas-backup \
+    -E RESTIC_CACHE_DIR=/var/cache/backup-machine \
     "$@"
 }
 
@@ -196,7 +196,7 @@ quiet() {
 }
 
 browse() {
-  local dir=/run/nas-backup-browse
+  local dir=/run/backup-machine-browse
   echo "Backups are at $dir/snapshots while this runs. Copy out what you need, then press Ctrl+C."
   echo
   (sleep 8 && uwsm-app -- nautilus "$dir/snapshots" >/dev/null 2>&1) &

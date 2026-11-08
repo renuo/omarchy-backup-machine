@@ -1,5 +1,5 @@
 setup() {
-  UNIT="$BATS_TEST_DIRNAME/../systemd/nas-backup.service"
+  UNIT="$BATS_TEST_DIRNAME/../systemd/backup-machine.service"
   export STATE_DIRECTORY="$BATS_TEST_TMPDIR/state"
   export RESTIC_REPOSITORY="rclone::smb:laptop_backups/me-delly"
   mkdir -p "$STATE_DIRECTORY"

@@ -13,9 +13,9 @@ shellcheck ctl.sh libexec/run bin/* test/fakebin/*
 # only on install.
 unit_dir=$(mktemp -d)
 trap 'rm -rf "$unit_dir"' EXIT
-sed "s|^ExecStart=/usr/local/lib/nas-backup/run$|ExecStart=$PWD/libexec/run|" systemd/nas-backup.service >"$unit_dir/nas-backup.service"
-cp systemd/nas-backup.timer "$unit_dir/"
-systemd-analyze verify --man=no "$unit_dir/nas-backup.service" "$unit_dir/nas-backup.timer"
+sed "s|^ExecStart=/usr/local/lib/backup-machine/run$|ExecStart=$PWD/libexec/run|" systemd/backup-machine.service >"$unit_dir/backup-machine.service"
+cp systemd/backup-machine.timer "$unit_dir/"
+systemd-analyze verify --man=no "$unit_dir/backup-machine.service" "$unit_dir/backup-machine.timer"
 
 node --test \
   --experimental-test-coverage \

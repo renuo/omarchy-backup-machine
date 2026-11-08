@@ -1,16 +1,16 @@
 # What the NAS backup leaves out, one restic pattern per line. A pattern
 # without a slash matches that name anywhere. Absolute paths start with the
-# snapshot: /.nas-backup/root for /, /.nas-backup/home for /home.
+# snapshot: /.backup-machine/root for /, /.backup-machine/home for /home.
 # https://restic.readthedocs.io/en/stable/040_backup.html#excluding-files
 
 # Rebuilt or downloaded again on their own
-/.nas-backup/root/var/cache
-/.nas-backup/root/var/tmp
-/.nas-backup/root/var/lib/docker
-/.nas-backup/root/var/lib/systemd/coredump
-/.nas-backup/home/*/.cache
-/.nas-backup/home/*/.local/share/Trash
-/.nas-backup/home/*/.local/share/mise/installs
+/.backup-machine/root/var/cache
+/.backup-machine/root/var/tmp
+/.backup-machine/root/var/lib/docker
+/.backup-machine/root/var/lib/systemd/coredump
+/.backup-machine/home/*/.cache
+/.backup-machine/home/*/.local/share/Trash
+/.backup-machine/home/*/.local/share/mise/installs
 
 # Build output and dependencies in projects
 node_modules

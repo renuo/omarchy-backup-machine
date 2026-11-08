@@ -9,14 +9,14 @@ import "Model.js" as Model
 
 // Bar button plus popup for the backup of the whole system to the office NAS,
 // Time Machine's job on a Mac. The popup walks through the setup one step at
-// a time and then offers the backups themselves. nas-backup.service runs as
+// a time and then offers the backups themselves. backup-machine.service runs as
 // root, so its files are root's: every step that changes them runs in
 // Omarchy's floating terminal through ctl.sh, with sudo, and the popup steps
 // aside for it.
 Panel {
   id: root
-  moduleName: "renuo.nas-backup"
-  ipcTarget: "nas-backup"
+  moduleName: "renuo.backup-machine"
+  ipcTarget: "backup-machine"
 
   readonly property string ctlPath: Model.pathFromUrl(Qt.resolvedUrl("ctl.sh"))
 

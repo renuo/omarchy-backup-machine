@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Run by nas-backup.service as root. Takes a read-only btrfs snapshot of every
-# subvolume in NAS_BACKUP_SUBVOLUMES, so the backup is one moment of the whole
+# Run by backup-machine.service as root. Takes a read-only btrfs snapshot of every
+# subvolume in BACKUP_MACHINE_SUBVOLUMES, so the backup is one moment of the whole
 # system, and backs the snapshots up with restic. The settings come from the
 # unit's environment files.
 
 set -euo pipefail
 
-SNAPSHOT_DIR=${NAS_BACKUP_SNAPSHOT_DIR:-/.nas-backup}
-STATE_DIR=${STATE_DIRECTORY:-/var/lib/nas-backup}
+SNAPSHOT_DIR=${BACKUP_MACHINE_SNAPSHOT_DIR:-/.backup-machine}
+STATE_DIR=${STATE_DIRECTORY:-/var/lib/backup-machine}
 PRUNE_EVERY=$((24 * 3600))
 
 # "/" is "root", "/home" is "home", "/var/lib/x" is "var-lib-x".
@@ -33,7 +33,7 @@ mkdir -p "$SNAPSHOT_DIR"
 delete_snapshots
 
 paths=()
-for subvolume in ${NAS_BACKUP_SUBVOLUMES:-/ /home}; do
+for subvolume in ${BACKUP_MACHINE_SUBVOLUMES:-/ /home}; do
   [[ $(stat -f -c %T "$subvolume") == btrfs ]] || {
     echo "$subvolume is not on btrfs; only btrfs can be snapshotted." >&2
     exit 1
@@ -45,8 +45,8 @@ done
 
 # shellcheck disable=SC2086 # the options are a list of words
 restic backup "${paths[@]}" \
-  --exclude-file=/etc/nas-backup/excludes.txt \
-  ${NAS_BACKUP_ARGS:-}
+  --exclude-file=/etc/backup-machine/excludes.txt \
+  ${BACKUP_MACHINE_ARGS:-}
 
 # Pruning rewrites packs on the NAS; once a day is plenty.
 last_prune=$(stat -c %Y "$STATE_DIR/last-prune" 2>/dev/null || echo 0)
