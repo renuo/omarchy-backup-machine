@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "renuo.backup-machine",
-  "name": "NAS backup",
+  "name": "Machine backup",
   "version": "1.0.0",
   "author": "Renuo AG",
   "license": "MIT",
-  "description": "Time Machine for Omarchy: btrfs snapshots of the whole system, backed up with restic to the office NAS whenever it is in reach.",
+  "description": "The machine level of a Renuo laptop's backup: btrfs snapshots of the whole system, backed up with restic to the office NAS once a day at the office.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,8 +13,8 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "Office NAS backup",
-    "description": "When the whole system was last backed up to the office NAS, and every setup step.",
+    "displayName": "Machine backup",
+    "description": "When the whole system was last backed up to the office NAS, whether today's backup is done, and every setup step.",
     "category": "Files",
     "allowMultiple": false,
     "defaultSection": "right"
