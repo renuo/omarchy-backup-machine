@@ -18,7 +18,8 @@ EnvironmentFile=/etc/backup-machine/nas.env
 ExecCondition=/usr/bin/timeout 3 /usr/bin/bash -c 'exec 3<>"/dev/tcp/$${RCLONE_SMB_HOST}/445"'
 ExecStart=/usr/local/lib/backup-machine/run
 # systemd forgets a run when it restarts, so the outcome is kept for the
-# panel. $$ hands a variable to the shell instead of to systemd.
-ExecStopPost=/bin/sh -c 'echo "$$SERVICE_RESULT $$(date +%%s)" >"$$STATE_DIRECTORY/last-run"; [ "$$SERVICE_RESULT" != success ] || { cp "$$STATE_DIRECTORY/last-run" "$$STATE_DIRECTORY/last-success"; printf %%s "$$RESTIC_REPOSITORY" >"$$STATE_DIRECTORY/repository"; }'
+# panel. A run ExecCondition skipped ends here too, as "exec-condition", and
+# is no outcome. $$ hands a variable to the shell instead of to systemd.
+ExecStopPost=/bin/sh -c '[ "$$SERVICE_RESULT" != exec-condition ] || exit 0; echo "$$SERVICE_RESULT $$(date +%%s)" >"$$STATE_DIRECTORY/last-run"; [ "$$SERVICE_RESULT" != success ] || { cp "$$STATE_DIRECTORY/last-run" "$$STATE_DIRECTORY/last-success"; printf %%s "$$RESTIC_REPOSITORY" >"$$STATE_DIRECTORY/repository"; }'
 Nice=10
 IOSchedulingClass=idle
