@@ -3,6 +3,10 @@ const assert = require("node:assert/strict")
 const path = require("node:path")
 const { loadModel } = require("./load-model")
 
+// "Today" is a local calendar day; pin the zone so the tests mean the same
+// day everywhere.
+process.env.TZ = "Europe/Zurich"
+
 const Model = loadModel()
 
 // Values built inside the vm context carry that context's prototypes, which
@@ -224,20 +228,43 @@ describe("heroMeta", () => {
   })
 })
 
+describe("reach", () => {
+  const yesterday = { lastSuccess: NOW - DAY }
+
+  it("is done for the day once a backup worked today", () => {
+    assert.equal(Model.reach(healthy(), NOW, strings), "Done for today")
+    assert.equal(Model.reach(healthy({ reachable: false }), NOW, strings), "Done for today")
+  })
+
+  it("expects today's backup within the hour while the NAS is in reach", () => {
+    assert.equal(Model.reach(healthy(yesterday), NOW, strings), "The NAS is in reach; today's backup starts within the hour")
+  })
+
+  it("promises nothing while automatic backups are off", () => {
+    assert.equal(Model.reach(healthy({ ...yesterday, timerEnabled: false }), NOW, strings), "The NAS is in reach")
+  })
+
+  it("waits for the office otherwise", () => {
+    assert.equal(Model.reach(healthy({ ...yesterday, reachable: false }), NOW, strings), "The NAS is out of reach; the backup waits for the office")
+    assert.equal(Model.reach(healthy({ lastSuccess: 0, reachable: false }), NOW, strings), "The NAS is out of reach; the backup waits for the office")
+  })
+})
+
 describe("tooltip", () => {
-  it("adds whether the NAS is in reach", () => {
-    assert.equal(Model.tooltip(healthy(), NOW, strings), "Last backup 1 hour ago\nThe NAS is in reach")
-    assert.equal(Model.tooltip(healthy({ reachable: false }), NOW, strings), "Last backup 1 hour ago\nThe NAS is out of reach; backups wait for the office")
+  it("adds where today's backup stands", () => {
+    assert.equal(Model.tooltip(healthy(), NOW, strings), "Last backup 1 hour ago\nDone for today")
+    assert.equal(Model.tooltip(healthy({ lastSuccess: NOW - DAY, reachable: false }), NOW, strings),
+      "Last backup 24 hours ago\nThe NAS is out of reach; the backup waits for the office")
   })
 
   it("adds why the widget is dimmed or urgent", () => {
-    assert.equal(Model.tooltip(healthy({ timerEnabled: false, reachable: false }), NOW, strings),
-      "Last backup 1 hour ago\nAutomatic backups are off\nThe NAS is out of reach; backups wait for the office")
+    assert.equal(Model.tooltip(healthy({ timerEnabled: false }), NOW, strings),
+      "Last backup 1 hour ago\nAutomatic backups are off\nDone for today")
     assert.equal(Model.tooltip(healthy({ lastSuccess: NOW - 11 * DAY }), NOW, strings),
-      "Last backup 11 days ago\nNo backup for over 10 days\nThe NAS is in reach")
+      "Last backup 11 days ago\nNo backup for over 10 days\nThe NAS is in reach; today's backup starts within the hour")
   })
 
-  it("leaves reachability out while running or not set up", () => {
+  it("leaves where today's backup stands out while running or not set up", () => {
     assert.equal(Model.tooltip(healthy({ running: true }), NOW, strings), "Backing up…")
     assert.equal(Model.tooltip(healthy({ login: false }), NOW, strings), "Not set up yet")
     assert.equal(Model.tooltip(null, NOW, strings), "Loading…")

@@ -54,3 +54,28 @@ condition() {
   [ "$status" -ne 0 ]
   [ "$status" -ne 255 ]
 }
+
+# Runs the daily service's check the way systemd would.
+due() {
+  local script
+  script=$(sed -n "s/^ExecCondition=\/bin\/sh -c '\(.*\)'$/\1/p" "$BATS_TEST_DIRNAME/../systemd/backup-machine-daily.service" | sed 's/\$\$/$/g; s/%%/%/g')
+  [ -n "$script" ]
+  sh -c "$script"
+}
+
+@test "the hourly check starts a backup when none ever worked" {
+  run due
+  [ "$status" -eq 0 ]
+}
+
+@test "the hourly check starts a backup when the last one worked yesterday" {
+  echo "success $(date -d 'yesterday 12:00' +%s)" >"$STATE_DIRECTORY/last-success"
+  run due
+  [ "$status" -eq 0 ]
+}
+
+@test "the hourly check skips once a backup worked today" {
+  echo "success $(date +%s)" >"$STATE_DIRECTORY/last-success"
+  run due
+  [ "$status" -eq 1 ]
+}

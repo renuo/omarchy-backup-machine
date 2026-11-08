@@ -31,10 +31,10 @@ omarchy-plugin-validate "$SOURCE_DIR" || fail "manifest validation failed"
 omarchy pkg add restic rclone
 
 sudo install -D -m 755 "$SOURCE_DIR/libexec/run" /usr/local/lib/backup-machine/run
-sudo install -m 644 "$SOURCE_DIR/systemd/backup-machine.service" "$SOURCE_DIR/systemd/backup-machine.timer" /etc/systemd/system/
+sudo install -m 644 "$SOURCE_DIR"/systemd/backup-machine{.service,-daily.service,-daily.timer} /etc/systemd/system/
 sudo install -m 644 "$SOURCE_DIR/polkit/50-backup-machine.rules" /etc/polkit-1/rules.d/
 sudo systemctl daemon-reload
-echo "installed /usr/local/lib/backup-machine/run, backup-machine.service and .timer, and the polkit rule"
+echo "installed /usr/local/lib/backup-machine/run, backup-machine.service, backup-machine-daily.service and .timer, and the polkit rule"
 
 mkdir -p "$TARGET_DIR"
 

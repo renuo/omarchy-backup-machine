@@ -1,0 +1,10 @@
+[Unit]
+Description=Check every hour whether the machine backup is due
+
+[Timer]
+OnCalendar=hourly
+# Spreads the checks, so the laptops at the office do not all start at once.
+RandomizedDelaySec=20min
+
+[Install]
+WantedBy=timers.target

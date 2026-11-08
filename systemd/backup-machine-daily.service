@@ -1,0 +1,12 @@
+[Unit]
+Description=Start the machine backup unless one worked today
+Documentation=https://github.com/renuo/omarchy-backup-machine
+
+[Service]
+Type=oneshot
+# Shared with backup-machine.service, which keeps its last success there.
+StateDirectory=backup-machine
+# Whether the NAS is in reach is up to backup-machine.service itself, so
+# "Back up now" checks that too.
+ExecCondition=/bin/sh -c '{ read -r _ at <"$$STATE_DIRECTORY/last-success"; } 2>/dev/null || exit 0; [ "$$(date -d "@$$at" +%%F)" != "$$(date +%%F)" ]'
+ExecStart=/usr/bin/systemctl start --no-block backup-machine.service

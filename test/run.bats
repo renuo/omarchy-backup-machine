@@ -56,18 +56,9 @@ EOF
   ! grep -q '^restic' "$FAKE_ARGS"
 }
 
-@test "prunes with the retention once a day" {
+@test "prunes with the retention after the backup" {
   run bash "$SCRIPT"
-  grep -q '^restic forget --prune --keep-hourly 24 --keep-daily 30 |' "$FAKE_ARGS"
-  : >"$FAKE_ARGS"
-  run bash "$SCRIPT"
-  ! grep -q '^restic forget' "$FAKE_ARGS"
-}
-
-@test "prunes again when the last prune is more than a day old" {
-  touch -d '25 hours ago' "$STATE_DIRECTORY/last-prune"
-  run bash "$SCRIPT"
-  grep -q '^restic forget --prune' "$FAKE_ARGS"
+  [ "$(grep -n '^restic backup' "$FAKE_ARGS" | cut -d: -f1)" -lt "$(grep -n '^restic forget --prune --keep-hourly 24 --keep-daily 30 |' "$FAKE_ARGS" | cut -d: -f1)" ]
 }
 
 @test "keeps the repository's size for the panel" {

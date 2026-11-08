@@ -12,7 +12,7 @@ ETC=${BACKUP_MACHINE_ETC:-/etc/backup-machine}
 STATE_DIR=${BACKUP_MACHINE_STATE:-/var/lib/backup-machine}
 CONFIG="$ETC/backup.env"
 SERVICE=backup-machine.service
-TIMER=backup-machine.timer
+TIMER=backup-machine-daily.timer
 RUN=${BACKUP_MACHINE_RUN:-/usr/local/lib/backup-machine/run}
 
 usage() {

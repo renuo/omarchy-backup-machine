@@ -73,7 +73,7 @@ state_field() {
   echo "exit-code 1762600000" >"$BACKUP_MACHINE_STATE/last-run"
   echo "success 1762500000" >"$BACKUP_MACHINE_STATE/last-success"
   echo '{"total_size":123456789,"total_file_count":5}' >"$BACKUP_MACHINE_STATE/stats.json"
-  echo enabled >"$FAKE_SYSTEMD/backup-machine.timer.enabled"
+  echo enabled >"$FAKE_SYSTEMD/backup-machine-daily.timer.enabled"
   echo activating >"$FAKE_SYSTEMD/backup-machine.service.active"
   echo '[{"next":1762650000123456}]' >"$FAKE_SYSTEMD/timers.json"
   run bash "$SCRIPT" state
@@ -216,8 +216,8 @@ sudoedit $BACKUP_MACHINE_ETC/excludes.txt" ]
   bash "$SCRIPT" backup
   run bash "$SCRIPT" stop
   [ "$output" = "" ]
-  [ "$(cat "$FAKE_ARGS")" = "systemctl enable --now backup-machine.timer
-systemctl disable --now backup-machine.timer
+  [ "$(cat "$FAKE_ARGS")" = "systemctl enable --now backup-machine-daily.timer
+systemctl disable --now backup-machine-daily.timer
 systemctl start --no-block backup-machine.service
 systemctl stop backup-machine.service" ]
 }
@@ -229,7 +229,7 @@ systemctl stop backup-machine.service" ]
 
 @test "schedule edits the timer with nvim as root" {
   bash "$SCRIPT" schedule
-  grep -qx 'sudo SYSTEMD_EDITOR=nvim systemctl edit backup-machine.timer' "$FAKE_ARGS"
+  grep -qx 'sudo SYSTEMD_EDITOR=nvim systemctl edit backup-machine-daily.timer' "$FAKE_ARGS"
 }
 
 @test "snapshots runs restic as the service would" {

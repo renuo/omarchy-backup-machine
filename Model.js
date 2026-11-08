@@ -145,13 +145,25 @@ function heroMeta(state, now, strings) {
   return last
 }
 
-// The hero line, plus why the icon looks the way it does and whether the
-// NAS is in reach right now.
+// Local calendar days, as the hourly check counts them.
+function backedUpToday(state, now) {
+  return state.lastSuccess > 0 && new Date(state.lastSuccess * 1000).toDateString() === new Date(now * 1000).toDateString()
+}
+
+// Whether today's backup is done, about to start, or waits for the office.
+function reach(state, now, strings) {
+  if (backedUpToday(state, now)) return strings.t("nas.doneToday")
+  if (!state.reachable) return strings.t("nas.away")
+  return strings.t(state.timerEnabled ? "nas.due" : "nas.reachable")
+}
+
+// The hero line, plus why the icon looks the way it does and where today's
+// backup stands.
 function tooltip(state, now, strings) {
   var p = phase(state, now)
   var lines = [heroMeta(state, now, strings)]
   if (p === "off" || p === "stale") lines.push(strings.t("phase." + p))
-  if (state && ready(state) && p !== "running") lines.push(strings.t(state.reachable ? "nas.reachable" : "nas.away"))
+  if (state && ready(state) && p !== "running") lines.push(reach(state, now, strings))
   return lines.join("\n")
 }
 

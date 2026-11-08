@@ -9,7 +9,6 @@ set -euo pipefail
 
 SNAPSHOT_DIR=${BACKUP_MACHINE_SNAPSHOT_DIR:-/.backup-machine}
 STATE_DIR=${STATE_DIRECTORY:-/var/lib/backup-machine}
-PRUNE_EVERY=$((24 * 3600))
 
 # "/" is "root", "/home" is "home", "/var/lib/x" is "var-lib-x".
 snapshot_name() {
@@ -48,13 +47,8 @@ restic backup "${paths[@]}" \
   --exclude-file=/etc/backup-machine/excludes.txt \
   ${BACKUP_MACHINE_ARGS:-}
 
-# Pruning rewrites packs on the NAS; once a day is plenty.
-last_prune=$(stat -c %Y "$STATE_DIR/last-prune" 2>/dev/null || echo 0)
-if (($(date +%s) - last_prune > PRUNE_EVERY)); then
-  # shellcheck disable=SC2086
-  restic forget --prune ${RESTIC_FORGET_ARGS:-}
-  touch "$STATE_DIR/last-prune"
-fi
+# shellcheck disable=SC2086 # the options are a list of words
+restic forget --prune ${RESTIC_FORGET_ARGS:-}
 
 restic stats --mode raw-data --json >"$STATE_DIR/stats.json.new"
 mv "$STATE_DIR/stats.json.new" "$STATE_DIR/stats.json"

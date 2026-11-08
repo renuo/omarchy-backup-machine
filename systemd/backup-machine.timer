@@ -1,9 +1,0 @@
-[Unit]
-Description=Back up to the office NAS every hour it can be reached
-
-[Timer]
-OnCalendar=hourly
-RandomizedDelaySec=10min
-
-[Install]
-WantedBy=timers.target

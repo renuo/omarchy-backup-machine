@@ -112,7 +112,7 @@ Panel {
   }
 
   // Quick while someone looks or a backup runs; a minute otherwise is plenty
-  // for an hourly job.
+  // for a daily job.
   Timer {
     interval: root.opened || root.phase === "running" ? 2000 : 60000
     running: true
@@ -230,7 +230,7 @@ Panel {
             }
 
             Note {
-              text: !root.backupState ? "" : [Model.usage(root.backupState, strings), strings.t(root.backupState.reachable ? "nas.reachable" : "nas.away")]
+              text: !root.backupState ? "" : [Model.usage(root.backupState, strings), Model.reach(root.backupState, root.now, strings)]
                 .filter(function(line) { return line !== "" }).join("\n")
             }
 
