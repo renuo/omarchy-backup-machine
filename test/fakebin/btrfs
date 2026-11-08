@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# `subvolume snapshot -r <src> <dst>` makes <dst> a directory, `subvolume
+# delete --commit-after <dst>` removes it; both are recorded.
+
+echo "btrfs $*" >>"$FAKE_ARGS"
+case "$2 $3" in
+"snapshot -r") mkdir "$5" ;;
+"delete --commit-after") rmdir "$4" ;;
+esac

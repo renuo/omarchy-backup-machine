@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+missing=()
+for tool in jq bats node shellcheck; do
+  command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
+done
+if ((${#missing[@]} > 0)); then
+  echo "setup: missing ${missing[*]}" >&2
+  echo "setup: omarchy pkg add jq bats shellcheck, mise use node" >&2
+  exit 1
+fi

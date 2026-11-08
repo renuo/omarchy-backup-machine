@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Records each call with the settings it got. `cat config` succeeds only when
+# $FAKE_RESTIC_EXISTS is set, `stats` prints $FAKE_RESTIC_STATS.
+
+echo "restic $* | ${RESTIC_REPOSITORY:-} | ${RESTIC_PASSWORD_FILE:-} | ${RESTIC_FORGET_ARGS:-}" >>"$FAKE_ARGS"
+case "$1 ${2:-}" in
+"cat config") [[ -n ${FAKE_RESTIC_EXISTS:-} ]] ;;
+"stats "*) echo "${FAKE_RESTIC_STATS:-{\}}" ;;
+esac

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Records every call. is-enabled/is-active answer from
+# $FAKE_SYSTEMD/<unit>.enabled|.active, list-timers from
+# $FAKE_SYSTEMD/timers.json; anything that changes a unit fails with
+# $FAKE_SYSTEMCTL_FAIL on stderr when it is set.
+
+echo "systemctl $*" >>"$FAKE_ARGS"
+
+case $1 in
+is-enabled | is-active)
+  file="$FAKE_SYSTEMD/$2.${1#is-}"
+  if [[ -f $file ]]; then answer=$(cat "$file"); elif [[ $1 == is-enabled ]]; then answer=disabled; else answer=inactive; fi
+  echo "$answer"
+  [[ $answer == enabled || $answer == active ]]
+  ;;
+list-timers)
+  [[ -f $FAKE_SYSTEMD/timers.json ]] && cat "$FAKE_SYSTEMD/timers.json" || echo "[]"
+  ;;
+enable | disable | start | stop)
+  if [[ -n ${FAKE_SYSTEMCTL_FAIL:-} ]]; then
+    echo "$FAKE_SYSTEMCTL_FAIL" >&2
+    exit 1
+  fi
+  echo "Created symlink, the way systemctl chats on stderr." >&2
+  ;;
+esac

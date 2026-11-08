@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# input and choose print the next line of $FAKE_GUM_ANSWERS.
+
+echo "gum $*" >>"$FAKE_ARGS"
+count=$(grep -cE '^gum (input|choose)' "$FAKE_ARGS")
+sed -n "${count}p" "$FAKE_GUM_ANSWERS"

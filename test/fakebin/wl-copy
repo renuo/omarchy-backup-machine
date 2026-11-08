@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "wl-copy $*" >>"$FAKE_ARGS"
+cat >"$FAKE_CLIPBOARD"

@@ -1,0 +1,24 @@
+[Unit]
+Description=Back up the whole system to the office NAS
+Documentation=https://github.com/renuo/omarchy-nas-backup
+ConditionPathExists=/etc/nas-backup/backup.env
+ConditionPathExists=/etc/nas-backup/nas.env
+ConditionPathExists=/etc/nas-backup/password
+
+[Service]
+Type=oneshot
+StateDirectory=nas-backup
+CacheDirectory=nas-backup
+Environment=RESTIC_PASSWORD_FILE=/etc/nas-backup/password
+Environment=RESTIC_CACHE_DIR=%C/nas-backup
+EnvironmentFile=/etc/nas-backup/backup.env
+EnvironmentFile=/etc/nas-backup/nas.env
+# Away from the office the NAS does not answer; that skips the run instead of
+# failing it.
+ExecCondition=/usr/bin/timeout 3 /usr/bin/bash -c 'exec 3<>"/dev/tcp/$${RCLONE_SMB_HOST}/445"'
+ExecStart=/usr/local/lib/nas-backup/run
+# systemd forgets a run when it restarts, so the outcome is kept for the
+# panel. $$ hands a variable to the shell instead of to systemd.
+ExecStopPost=/bin/sh -c 'echo "$$SERVICE_RESULT $$(date +%%s)" >"$$STATE_DIRECTORY/last-run"; [ "$$SERVICE_RESULT" != success ] || { cp "$$STATE_DIRECTORY/last-run" "$$STATE_DIRECTORY/last-success"; printf %%s "$$RESTIC_REPOSITORY" >"$$STATE_DIRECTORY/repository"; }'
+Nice=10
+IOSchedulingClass=idle

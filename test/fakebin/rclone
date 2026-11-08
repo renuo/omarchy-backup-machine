@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# `obscure -` prints "obscured:<stdin>". `lsf` records the SMB login it got
+# and fails when $FAKE_RCLONE_REFUSE is set.
+
+case $1 in
+obscure) echo "obscured:$(cat)" ;;
+lsf)
+  echo "rclone $* | $RCLONE_SMB_HOST $RCLONE_SMB_USER $RCLONE_SMB_PASS" >>"$FAKE_ARGS"
+  [[ -z ${FAKE_RCLONE_REFUSE:-} ]]
+  ;;
+esac

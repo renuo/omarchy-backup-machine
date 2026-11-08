@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Records the call and runs it without privileges; VAR=value words in front
+# become the command's environment, like sudo does for an administrator.
+
+echo "sudo $*" >>"$FAKE_ARGS"
+env=()
+while [[ ${1:-} == *=* ]]; do env+=("$1"); shift; done
+exec env "${env[@]}" "$@"

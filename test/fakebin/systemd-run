@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Records the call, then runs the command after the options with the
+# environment files loaded as systemd reads them: KEY=value, no shell.
+
+echo "systemd-run $*" >>"$FAKE_ARGS"
+while [[ $# -gt 0 && $1 == -* ]]; do
+  case $1 in
+  -p)
+    if [[ $2 == EnvironmentFile=* ]]; then
+      while IFS= read -r line; do
+        [[ $line =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] && export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
+      done <"${2#EnvironmentFile=}"
+    fi
+    shift 2
+    ;;
+  -E) export "${2?}"; shift 2 ;;
+  *) shift ;;
+  esac
+done
+exec "$@"

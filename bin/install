@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# Installs restic and rclone, the root side of the backup (run script, system
+# units, polkit rule) and this plugin, then enables the plugin. The setup
+# itself happens in its panel, see README.md.
+#
+# The run script goes to /usr/local/lib as root's own file: the service runs
+# it as root, so it must not stay writable by the user in the plugin folder.
+#
+# A copy rather than a symlink on purpose: the shell watches the plugin
+# directory with `inotifywait -r`, which does not descend into symlinked
+# directories, so a symlinked plugin would install fine and then never
+# hot-reload. Re-run this after editing; the copy itself triggers the reload.
+
+set -euo pipefail
+
+PLUGIN_ID="renuo.nas-backup"
+SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TARGET_DIR="$HOME/.config/omarchy/plugins/$PLUGIN_ID"
+
+fail() {
+  echo "install: $*" >&2
+  exit 1
+}
+
+command -v omarchy-plugin-validate >/dev/null 2>&1 ||
+  fail "omarchy is not installed (omarchy-plugin-validate not on PATH)"
+
+omarchy-plugin-validate "$SOURCE_DIR" || fail "manifest validation failed"
+
+omarchy pkg add restic rclone
+
+sudo install -D -m 755 "$SOURCE_DIR/libexec/run" /usr/local/lib/nas-backup/run
+sudo install -m 644 "$SOURCE_DIR/systemd/nas-backup.service" "$SOURCE_DIR/systemd/nas-backup.timer" /etc/systemd/system/
+sudo install -m 644 "$SOURCE_DIR/polkit/50-nas-backup.rules" /etc/polkit-1/rules.d/
+sudo systemctl daemon-reload
+echo "installed /usr/local/lib/nas-backup/run, nas-backup.service and .timer, and the polkit rule"
+
+mkdir -p "$TARGET_DIR"
+
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --delete \
+    --exclude '.*' \
+    --exclude 'bin' \
+    --exclude 'libexec' \
+    --exclude 'polkit' \
+    --exclude 'systemd' \
+    --exclude 'test' \
+    "$SOURCE_DIR"/ "$TARGET_DIR"/
+else
+  rm -rf "${TARGET_DIR:?}"/*
+  for entry in "$SOURCE_DIR"/*; do
+    case "${entry##*/}" in
+    bin | libexec | polkit | systemd | test) continue ;;
+    esac
+    cp -r "$entry" "$TARGET_DIR"/
+  done
+fi
+
+echo "installed $PLUGIN_ID -> $TARGET_DIR"
+
+# rescanPlugins is belt-and-braces: the inotify watcher already picked up the
+# copy, but a first install creates the directory the watcher may not be
+# watching yet.
+if command -v omarchy-shell >/dev/null 2>&1; then
+  omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+fi
+
+if omarchy-plugin-list --json 2>/dev/null | jq -e --arg id "$PLUGIN_ID" 'any(.[]; .id == $id and .enabled)' >/dev/null; then
+  echo "already enabled"
+else
+  omarchy plugin enable "$PLUGIN_ID" --section right 2>/dev/null ||
+    echo "enable it with: omarchy plugin enable $PLUGIN_ID --section right"
+fi

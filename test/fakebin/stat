@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# `stat -f -c %T <path>` answers $FAKE_FSTYPE (btrfs by default); anything
+# else goes to the real stat.
+
+if [[ $1 == -f && $2 == -c && $3 == %T ]]; then
+  echo "${FAKE_FSTYPE:-btrfs}"
+else
+  exec /usr/bin/stat "$@"
+fi

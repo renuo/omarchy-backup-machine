@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "sudoedit $*" >>"$FAKE_ARGS"
+
